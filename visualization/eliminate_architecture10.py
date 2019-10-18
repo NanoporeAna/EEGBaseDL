@@ -3,9 +3,9 @@ import numpy as np
 import pandas as pd
 import scipy.io as sio
 
-from data.load_single_data10 import test_batch, load_raw_data, load_raw_data_pool1, load_raw_data_pool2, \
-    load_raw_data_pool3, load_raw_data_pool4
-from model.CNN_BN10 import BaseCNN
+from DATA.load_single_data10 import raw_test_batch10, load_raw_data_conv1, load_raw_data_pool1, load_raw_data_conv2, \
+    load_raw_data_pool2, load_raw_data_conv3, load_raw_data_pool3, load_raw_data_conv4, load_raw_data_pool4
+from MODELS.CNN_BN10 import BaseCNN
 
 
 def one_hot(labels, n_class = 7):
@@ -43,7 +43,7 @@ def evaluate(num):
 
     with tf.Session() as sess:
         tf.initialize_all_variables().run()
-        x, y = test_batch(num)#获取第x个人的数据
+        x, y = raw_test_batch10(num)#获取第x个人的数据
         reshape_xs = np.reshape(x,(-1,5000,9,1))
         ys = one_hot(y)
         conv1, pool1, conv2, pool2, conv3, pool3, conv4, pool4, acc_score =sess.run([out['conv1'], out['pool1'], out['conv2'], out['pool2'],
@@ -67,23 +67,30 @@ def get_corr_fliter(num,data,channle,fliter,pool):
         temp = data[i]#得到第k通道下各滤波器数据
         oneObject = []
         for j in range(9):
-            if pool ==0:
-                ga = load_raw_data(num,j)#获取要进行相关性分析的对象数据
-            if pool>0 and pool <=2:
+            if pool == 0:
+                ga = load_raw_data_conv1(num,j)#获取要进行相关性分析的对象数据
+            if pool == 1:
                 ga = load_raw_data_pool1(num,j)
-            if pool>2 and pool <=4:
+            if pool == 2:
+                ga = load_raw_data_conv2(num,j)
+            if pool == 3:
                 ga = load_raw_data_pool2(num,j)
-            if pool>4 and pool <=6:
+            if pool == 4:
+                ga = load_raw_data_conv3(num,j)
+            if pool == 5:
                 ga = load_raw_data_pool3(num,j)
-            if pool > 6:
-                ga = load_raw_data_pool4(num, j)
+            if pool == 6:
+                ga = load_raw_data_conv4(num,j)
+            if pool == 7:
+                ga = load_raw_data_pool4(num,j)
             cost = []
             for k in range(fliter):
                 cor = pd.DataFrame({'raw': temp[k], 'gamma': ga})  # 构建相关性的数据型
                 cost.append(cor.raw.corr(cor.gamma))  # 得到各滤波器与预处理数据的相关性值
-            x = np.mean(cost)
+            # x = max(cost,key=abs) # 此处求所有滤波器的最大值
+            x = np.mean(cost) # 求相关性平均值
             oneObject.append(x)  # oneObject 为一维矩阵
-            print("神经网络第 %g通道后的数据与原通道 %g的相关性为：%g " % (i,j,x))
+            print("经过神经网络第 %g通道处理后的数据与原通道 %g的相关性为：%g " % (i,j,x))
         list.append(oneObject)  # 二维矩阵
     return list
 
@@ -111,7 +118,7 @@ def sum(num):
         channel[i] = np.array(channel[i])
         channel[i] = np.reshape(channel[i],(-1,9))
 
-    sio.savemat('D:/EEG_WorkSpace10/MRS/raw_data_corr/'+str(num)+'.mat', {name1[0]:channel[0], name1[1]:channel[1], name1[2]:channel[2], name1[3]:channel[3], name1[4]:channel[4],name1[5]:channel[5],name1[6]:channel[6],name1[7]:channel[7]})
+    sio.savemat('D:/envelope/raw_data_corr10/'+str(num)+'.mat', {name1[0]:channel[0], name1[1]:channel[1], name1[2]:channel[2], name1[3]:channel[3], name1[4]:channel[4],name1[5]:channel[5],name1[6]:channel[6],name1[7]:channel[7]})
 def main(argv=None):
     for i in range(15):
         tf.reset_default_graph() # Python的控制台会保存上次运行结束的变量，需要将之前的结果清除

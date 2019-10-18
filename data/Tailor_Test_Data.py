@@ -1,20 +1,18 @@
 import scipy.io as sio
 import numpy as np
-import tensorflow as tf
-from datasets.DataSet import DataSet
 
 """
-这个脚本是用来获取整个数据集的产生的500*9 矩阵大小的 batch
+这个脚本是用来获取整个数据集的产生的5000*8 矩阵大小的 batch
 test_batch()
-return (18540,500,9)的样本集和（18540）便签集
+return (1844,5000,8)的样本集和（1844）便签集
 """
-with open("H:/SpaceWork/EEG_Work/path.txt") as file_object:
+with open("H:/SpaceWork/CNN-LSTM/raw_data8") as file_object:
     lines = file_object.readlines()  # 浠庢枃浠朵腑璇诲彇姣忎竴琛岋紝灏嗚幏鍙栫殑鍐呭鏀惧埌list閲?
 mat_path = []
 for line in lines:
     mat_path.append(line.strip())  # 灏嗘瘡琛屽湴鍧€杩藉姞鍒颁竴涓暟缁勯噷
 # print("ok")
-with open("H:/SpaceWork/EEG_Work/lables.txt") as file_object:
+with open("H:/SpaceWork/EEG_Work/lable.txt") as file_object:
     lines_lable = file_object.readlines()  # 浠庢枃浠朵腑璇诲彇姣忎竴琛岋紝灏嗚幏鍙栫殑鍐呭鏀惧埌list閲?
 lable_value = []
 for line in lines_lable:
@@ -27,7 +25,8 @@ for i in range(0, 15):
 def get_lable(load_path):  # 鏍规嵁璺緞寰楀埌鏍囩
     return mat_dictionary[load_path]
 
-###鎬庝箞灏唌at鏁版嵁鍒嗘垚鍗曚釜128*9鐨勬暟鎹煩闃碉紝灏?28*9鐭╅樀鏀惧埌涓€涓猙atch閲?#
+length = 5000
+channel = 8
 def tailor_test_batch():
     load_data0 = sio.loadmat(mat_path[0])  # 鍔犺浇mat鏂囦欢
     load_matrix = load_data0['data2'] # 鎻愬彇鍑鸿鏁版嵁
@@ -74,38 +73,38 @@ def tailor_test_batch():
         lo = sio.loadmat(mat_path[i])
         load =lo['data2']
         # print(shape[i]) #打印出每个的shape
-        for j in range(0, 500):
-            batchx = load[j * 500:(j + 1) * 500]  # 鍙?28*9鐨勬暟鎹煩闃?
-            batch = np.reshape(batchx, (500, 9))
+        for j in range(0, 50):
+            batchx = load[j * length:(j + 1) * length]  # 鍙?28*9鐨勬暟鎹煩闃?
+            batch = np.reshape(batchx, (length, channel))
             label = get_lable(mat_path[i])
             test_batch.append(batch)
             test_label.append(label)
 
     #对10号样本进行裁剪增加1倍数据集，平衡数据
-    for j in range(int(shape[9]/1000)-1):
-        batchx =load_matrix9[j * 500+137:(j + 1) * 500+137]
-        batch = np.reshape(batchx, (500, 9))
+    for j in range(int(shape[9]/length/2)-1):
+        batchx =load_matrix9[j * length+1111:(j + 1) * length+1111]
+        batch = np.reshape(batchx, (length, channel))
         label =get_lable(mat_path[9])
-        batch1 =load_matrix9[j * 500+249:(j + 1) * 500+249]
+        batch1 =load_matrix9[j * length+2102:(j + 1) * length+2102]
         test_batch.append(batch)
         test_label.append(label)
         test_batch.append(batch1)
         test_label.append(label)
 
     #对13号样本进行裁剪增加1倍数据集，平衡数据
-    for j in range(int(shape[12]/1000)-1):
+    for j in range(int(shape[12]/length/2)-1):
         for i in range(17, 19):
-            batchx =load_matrix12[j * 500+i*23:(j + 1) * 500+i*23]
-            batch = np.reshape(batchx, (500, 9))
+            batchx =load_matrix12[j * length+i*230:(j + 1) * length+i*230]
+            batch = np.reshape(batchx, (length, channel))
             label =get_lable(mat_path[12])
             test_batch.append(batch)
             test_label.append(label)
 
     # 对15号样本进行裁剪增加1倍数据集，平衡数据
-    for j in range(int(shape[14] / 1000)-1):
+    for j in range(int(shape[14] / length/2)-1):
         for i in range(13, 15):
-            batchx = load_matrix14[j * 500 + i * 29:(j + 1) * 500 + i * 29]
-            batch = np.reshape(batchx, (500, 9))
+            batchx = load_matrix14[j * length + i * 290:(j + 1) * length + i * 290]
+            batch = np.reshape(batchx, (length, channel))
             label = get_lable(mat_path[14])
             test_batch.append(batch)
             test_label.append(label)
@@ -137,9 +136,8 @@ writer.close()
 
 """
 
-#
-# x, y = tailor_test_batch()
-# print(x.shape)
+x, y = tailor_test_batch()
+print(x.shape)
 
 
 

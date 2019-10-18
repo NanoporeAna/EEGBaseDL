@@ -5,7 +5,7 @@ import numpy as np
 '''
 
 CNN =['conv1', 'pool1', 'conv2', 'pool2', 'conv3', 'pool3', 'conv4','pool4']
-path = 'D:/EEG_WorkSpace10/MRS/data_corr/delta_zero/'
+path = 'D:/EEG_WorkSpace5min/CNNLSTM/delta/max/'
 def delt():
 	for i in range(0,15):
 
@@ -29,7 +29,7 @@ def delt():
 		list = np.array(list)
 		list = np.reshape(list,(-1,9))
 
-		sio.savemat('D:/EEG_WorkSpace10/MRS/data_corr/delta_max/'+str(i)+'.mat', {'data':list })
+		sio.savemat('D:/EEG_WorkSpace5min/CNNLSTM/delta/max/'+str(i)+'.mat', {'data':list })
 delt()
 # newpath = path + str(0)+ '.mat'
 # load_data = sio.loadmat(newpath)

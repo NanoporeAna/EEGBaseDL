@@ -2,26 +2,15 @@ import os
 import tensorflow as tf
 import numpy as np
 
-from DATA.Tailor_Train_Data10 import tailor_train_batch
+from DATA.Tailor_Train_Data1min import tailor_train_batch
 from DATASET.DataSet import DataSet
-
 os.environ["TF_CPP_MIN_LOG_LEVEL"] = "2"
-
-
-def one_hot(labels, n_class=36):
-	""" One-hot encoding """
-	expansion = np.eye(n_class)
-	y = expansion[:, labels - 1].T
-	assert y.shape[1] == n_class, "Wrong number of labels!"
-	return y
-
 
 def standardize(train):
 	""" Standardize data """
 	# Standardize data
 	X_train = (train - np.mean(train, axis=0)[None, :, :]) / np.std(train, axis=0)[None, :, :]
 	return X_train
-
 
 def batch_norm(x, train, scope='bn'):
 	with tf.variable_scope(scope):
@@ -45,7 +34,6 @@ def batch_norm(x, train, scope='bn'):
 	mean, var = mean_var_with_update()
 	normed = tf.nn.batch_normalization(x, mean, var, beta, gamma, 1e-3)
 	return normed
-
 
 def batch_norm_template(inputs, is_training, scope, moments_dims, bn_decay):
 	""" Batch normalization on convolutional maps and beyond...
@@ -87,7 +75,6 @@ def batch_norm_template(inputs, is_training, scope, moments_dims, bn_decay):
 		normed = tf.nn.batch_normalization(inputs, mean, var, beta, gamma, 1e-3)
 	return normed
 
-
 def batch_norm_for_fc(inputs, is_training, bn_decay, scope):
 	""" Batch normalization on FC data.
 
@@ -101,7 +88,6 @@ def batch_norm_for_fc(inputs, is_training, bn_decay, scope):
 	"""
 	return batch_norm_template(inputs, is_training, scope, [0, ], bn_decay)
 
-
 def batch_norm_for_conv2d(inputs, is_training, bn_decay, scope):
 	""" Batch normalization on 2D convolutional maps.
 	Args:
@@ -113,54 +99,63 @@ def batch_norm_for_conv2d(inputs, is_training, bn_decay, scope):
 		normed:      batch-normalized maps
 	"""
 	return batch_norm_template(inputs, is_training, scope, [0, 1, 2], bn_decay)
-
+channel = 9
+EEG_length = 5000
+MRS = 7
+NIHSS = 36
+def one_hot(labels, n_class=MRS):
+	""" One-hot encoding """
+	expansion = np.eye(n_class)
+	y = expansion[:, labels - 1].T
+	assert y.shape[1] == n_class, "Wrong number of labels!"
+	return y
 
 def BaseCNN(input_tensor, train, regularizer):
 	# 卷积网第一层架构 输入为5000*9*16 的矩阵
 	with tf.variable_scope('layer1-conv'):
-		conv1_weights = tf.get_variable("weight", [3, 3, 1, 16],
+		conv1_weights = tf.get_variable("weight", [3, 1, 1, 4],
 		                                initializer=tf.truncated_normal_initializer(stddev=0.1))
-		conv1_biases = tf.get_variable('biases', [16], initializer=tf.constant_initializer(0.0))
+		conv1_biases = tf.get_variable('biases', [4], initializer=tf.constant_initializer(0.0))
 		conv1 = tf.nn.conv2d(input_tensor, conv1_weights, strides=[1, 1, 1, 1], padding='SAME', name='conv1')
 		res1 = tf.nn.bias_add(conv1, conv1_biases)
 		bn1 = batch_norm_for_conv2d(res1, train, bn_decay, scope='BN')
 		elu1 = tf.nn.elu(bn1)
 	with tf.variable_scope('layer1-pool'):
-		pool1 = tf.nn.max_pool(elu1, ksize=[1, 3, 3, 1], strides=[1, 2, 2, 1], padding='SAME', name='pool1')
+		pool1 = tf.nn.max_pool(elu1, ksize=[1, 3, 1, 1], strides=[1, 2, 1, 1], padding='SAME', name='pool1')
 	# 卷积网第二层架构输入为2500*5*32
 	with tf.variable_scope('layer2-conv'):
-		conv2_weights = tf.get_variable("weight", [3, 3, 16, 32],
+		conv2_weights = tf.get_variable("weight", [3, 1, 4, 8],
 		                                initializer=tf.truncated_normal_initializer(stddev=0.1))
-		conv2_biases = tf.get_variable('biases', [32], initializer=tf.constant_initializer(0.0))
+		conv2_biases = tf.get_variable('biases', [8], initializer=tf.constant_initializer(0.0))
 		conv2 = tf.nn.conv2d(pool1, conv2_weights, strides=[1, 1, 1, 1], padding='SAME', name='conv2')
 		res2 = tf.nn.bias_add(conv2, conv2_biases)
 		bn2 = batch_norm_for_conv2d(res2, train, bn_decay, scope='BN')
 		elu2 = tf.nn.elu(bn2)
 
 	with tf.variable_scope('layer2-pool'):
-		pool2 = tf.nn.max_pool(elu2, ksize=[1, 3, 3, 1], strides=[1, 2, 2, 1], padding='SAME', name='pool2')
+		pool2 = tf.nn.max_pool(elu2, ksize=[1, 3, 1, 1], strides=[1, 2, 1, 1], padding='SAME', name='pool2')
 	# 卷积网第二层架构输入为1250*3*64
 	with tf.variable_scope('layer3-conv'):
-		conv3_weights = tf.get_variable("weight", [3, 3, 32, 64],
+		conv3_weights = tf.get_variable("weight", [3, 1, 8, 16],
 		                                initializer=tf.truncated_normal_initializer(stddev=0.1))
-		conv3_biases = tf.get_variable('biases', [64], initializer=tf.constant_initializer(0.0))
+		conv3_biases = tf.get_variable('biases', [16], initializer=tf.constant_initializer(0.0))
 		conv3 = tf.nn.conv2d(pool2, conv3_weights, strides=[1, 1, 1, 1], padding='SAME', name='conv3')
 		res3 = tf.nn.bias_add(conv3, conv3_biases)
 		bn3 = batch_norm_for_conv2d(res3, train, bn_decay, scope='BN')
 		elu3 = tf.nn.elu(bn3)
 	with tf.variable_scope('layer3-pool'):
-		pool3 = tf.nn.max_pool(elu3, ksize=[1, 3, 3, 1], strides=[1, 2, 2, 1], padding='SAME', name='pool3')
+		pool3 = tf.nn.max_pool(elu3, ksize=[1, 3, 1, 1], strides=[1, 2, 1, 1], padding='SAME', name='pool3')
 	# 卷积网第二层架构输入为625*2*128
 	with tf.variable_scope('layer4-conv'):
-		conv4_weights = tf.get_variable("weight", [3, 3, 64, 128],
+		conv4_weights = tf.get_variable("weight", [3, 1, 16, 32],
 		                                initializer=tf.truncated_normal_initializer(stddev=0.1))
-		conv4_biases = tf.get_variable('biases', [128], initializer=tf.constant_initializer(0.0))
+		conv4_biases = tf.get_variable('biases', [32], initializer=tf.constant_initializer(0.0))
 		conv4 = tf.nn.conv2d(pool3, conv4_weights, strides=[1, 1, 1, 1], padding='SAME', name='conv4')
 		res4 = tf.nn.bias_add(conv4, conv4_biases)
 		bn4 = batch_norm_for_conv2d(res4, train, bn_decay, scope='BN')
 		elu4 = tf.nn.elu(bn4)
 	with tf.variable_scope('layer4-pool'):
-		pool4 = tf.nn.max_pool(elu4, ksize=[1, 3, 3, 1], strides=[1, 2, 2, 1], padding='SAME', name='pool4')
+		pool4 = tf.nn.max_pool(elu4, ksize=[1, 3, 1, 1], strides=[1, 2, 1, 1], padding='SAME', name='pool4')
 	# 将第四层池化层的输出转化为全连接层的输入格式，注意，因为每一层神经网络的输入输出都为一个batch的矩阵，
 	# 所以这里得到的维度也包含一个batch的数据的个数
 	pool_shape = pool4.get_shape().as_list()
@@ -180,10 +175,10 @@ def BaseCNN(input_tensor, train, regularizer):
 		if train is not None: fc1 = tf.nn.dropout(fc1, 0.5)
 
 	with tf.variable_scope('layer6-fc2'):
-		fc2_weights = tf.get_variable('weight', [512, 36], initializer=tf.truncated_normal_initializer(0.1))
+		fc2_weights = tf.get_variable('weight', [512, MRS], initializer=tf.truncated_normal_initializer(0.1))
 		if regularizer != None:
 			tf.add_to_collection('losses', regularizer(fc2_weights))
-		fc2_biases = tf.get_variable('biase', [36], initializer=tf.constant_initializer(0.1))
+		fc2_biases = tf.get_variable('biase', [MRS], initializer=tf.constant_initializer(0.1))
 		logit = tf.matmul(fc1, fc2_weights) + fc2_biases
 	out = {
 		'conv1': conv1,
@@ -199,25 +194,22 @@ def BaseCNN(input_tensor, train, regularizer):
 	}
 	return out
 
-
-bat = [542, 1037, 731, 522, 428, 287, 601, 419, 845, 802, 778, 1060, 91, 433, 208]
 # 配置神经网络参数
-Batch_Size = 60
-Learning_Rate_Base = 0.001
+Batch_Size = 25 #25 1min
+Learning_Rate_Base = 0.0001
 Learning_Rate_Decay = 0.99
-Regularazition_Rate = 0.001
-Training_Steps = 205  # 裁剪后的数据量为12311/60 = 205
+Regularazition_Rate = 0.0001
+Training_Steps = 205  # 裁剪后的数据量为 #323*40 1min
 bn_decay = 0.9
 Moving_Average_Decay = 0.99
-Model_Save_Path = "CNN10_NIHSS_v"
+Model_Save_Path = "CNN1mins_v"
 Model_Name = "model.ckpt"
-
 
 def train(train, label, num):
 	with tf.name_scope("input"):
-		input_x = tf.placeholder(tf.float32, [Batch_Size, 5000, 9, 1], name='EEG-input')  # 数据的输入，第一维表示一个batch中样例的个数,100要加上，
+		input_x = tf.placeholder(tf.float32, [Batch_Size, EEG_length, channel, 1], name='EEG-input')  # 数据的输入，第一维表示一个batch中样例的个数,100要加上，
 		#  failed to convert object of type <class 'list'> to Tensor. Contents: [None, 4096]. Consider casting elements to a supported type.
-		input_y = tf.placeholder(tf.float32, [None, 36], name='EEG-lable')  # 一个batch里的lable
+		input_y = tf.placeholder(tf.float32, [None, MRS], name='EEG-lable')  # 一个batch里的lable
 	# reshaped_x = np.reshape(input_x,(100,500,9,1))#类似于将输入的训练数据格式调整为一个四维矩阵，并将这个调整的数据传入sess.run过程
 
 	regularlizer = tf.contrib.layers.l2_regularizer(Regularazition_Rate)
@@ -265,30 +257,27 @@ def train(train, label, num):
 	merged = tf.summary.merge_all()
 	saver = tf.train.Saver()
 	with tf.Session() as sess:
-		writer = tf.summary.FileWriter("CNN10_NIHSS_v" + str(num) + "_logs/", sess.graph)
+		writer = tf.summary.FileWriter(Model_Save_Path + str(num) + "_logs/", sess.graph)
 		tf.global_variables_initializer().run()
 		ds = DataSet(train, label)
 		epochs = 5
 		for e in range(epochs):
 			for i in range(Training_Steps):
 				x, y = ds.next_batch(Batch_Size)
-				xs = np.reshape(x, (Batch_Size, 5000, 9, 1))
+				xs = np.reshape(x, (Batch_Size, EEG_length, channel, 1))
 				ys = one_hot(y)
 				# Feed dictionary
 				feed = {input_x: xs, input_y: ys}
-				# train_s,lo,acc,step = sess.run([train_op,loss,accuracy,global_step],feed_dict=
 				summary, trainloss, trainacc, _ = sess.run([merged, loss, accuracy, train_op], feed_dict=feed)
 				writer.add_summary(summary, i)
-				if i % 17 == 0:
+				if i % 40 == 0:
 					print("after %g epoch: train loss: %g ,Train acc: %g" % (e,trainloss, trainacc))
 					saver.save(sess, os.path.join(Model_Save_Path + str(num), Model_Name), global_step=global_step)
-			# test_acc = sess.run(accuracy,feed_dict={input_x:test_x,input_y:test_y})
-			# print("测试精度为：%g" % test_acc)
 		writer.close()
 def evaluate(train, label, batnum, num):
 	with tf.name_scope("input"):
-		input_x = tf.placeholder(tf.float32, [batnum, 5000, 9, 1], name='EEG-input')  # 数据的输入，第一维表示一个batch中样例的个数
-		input_y = tf.placeholder(tf.float32, [None, 36], name='EEG-lable')  # 一个batch里的lable
+		input_x = tf.placeholder(tf.float32, [batnum, EEG_length, channel, 1], name='EEG-input')  # 数据的输入，第一维表示一个batch中样例的个数
+		input_y = tf.placeholder(tf.float32, [None, MRS], name='EEG-lable')  # 一个batch里的lable
 	# regularlizer = tf.contrib.layers.l2_regularizer(Regularazition_Rate)  # 本来测试的时候不用加这个
 	no_training = tf.cast(False, tf.bool)
 	out = BaseCNN(input_x, no_training, None)
@@ -307,16 +296,12 @@ def evaluate(train, label, batnum, num):
 		if ckpt and ckpt.model_checkpoint_path:
 			saver.restore(sess, ckpt.model_checkpoint_path)
 			global_step = ckpt.model_checkpoint_path.split('/')[-1].split('-')[-1]
-			# x, y = test_batch()
-			# x = x[100: 200]
-			# y = y[100: 200]
-			# xs = standardize(x)
-			for i in range(4):
+			for i in range(34):
 				x_test,y_label = train[i*batnum:(i+1)*batnum],label[i*batnum:(i+1)*batnum]
-				reshape_xs = np.reshape(x_test, (-1, 5000, 9, 1))
+				reshape_xs = np.reshape(x_test, (-1, EEG_length, channel, 1))
 				ys = one_hot(y_label)
 				acc_score = sess.run(accuracy, feed_dict={input_x: reshape_xs, input_y: ys})
-				print("Afer %s training step, test accuracy = %g" % (global_step, acc_score))
+				# print("Afer %s training step, test accuracy = %g" % (global_step, acc_score))
 				acc.append(acc_score)
 
 		else:
@@ -324,24 +309,12 @@ def evaluate(train, label, batnum, num):
 
 	return acc
 def main(argv=None):
-	"""`
-	x,y = test_batch()
-	# 十倍交叉验证法，数组无法劈分开too many indices for array
-	for i in range(10):
-		x_test,y_test = x[i*13400:(i+1)*13400],y[i*13400:(i+1)*13400]
-		x_train1,y_train1 =x[0:i*13400],y[0:i*13400]
-		x_train = np.concatenate((x_train1, x[(i+1)*13400:134000]), axis=0)
-		y_train = np.concatenate((y_train1, y[(i + 1) * 13400:134000]), axis=0)
-		train(x_train,y_train,i)
-		mean = evaluate(x_test,y_test,13400,i)
-		"""
-	# x_train, y_train = train_batch()
 	x_train, y_train = tailor_train_batch()
-	train(x_train, y_train, 8)
+	train(x_train, y_train, 10)
 	# tf.reset_default_graph()
 	# x_test, y_test = test_batch() # 750
 	# x_test, y_test = tailor_test_batch() # 1844
-	# mean = evaluate(x_test, y_test, 461, 1) #batnum = len(test)/4  461 187.5
+	# mean = evaluate(x_train, y_train, 362, 2) #batnum = len(test) = 103*18 95*85
 	# print(np.mean(mean))
 
 if __name__ == '__main__':

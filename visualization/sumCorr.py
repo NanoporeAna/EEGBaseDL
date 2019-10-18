@@ -3,33 +3,37 @@ import numpy as np
 import pandas as pd
 import scipy.io as sio
 
-from DATA.load_delta_data10 import load_delta_data_conv1, load_delta_data_pool1, load_delta_data_pool2, \
-    load_delta_data_pool3,load_delta_data_pool4, load_delta_data_conv2, load_delta_data_conv4, load_delta_data_conv3
-from DATA.load_single_data10 import raw_test_batch10
+from DATA.load_data1min import raw_test_batch1min
+from DATA.load_delta_data_1min import load_delta_data_conv1, load_delta_data_pool1, load_delta_data_conv2, \
+    load_delta_data_pool2, load_delta_data_conv3, load_delta_data_pool3, load_delta_data_conv4, load_delta_data_pool4, \
+    delta_data
 from MODELS.CNNLSTM import CNN_LSTM
 
+MRS = 7
+NIHSS = 36
 
-def one_hot(labels, n_class = 7):
-	""" One-hot encoding """
-	expansion = np.eye(n_class)
-	y = expansion[:, labels-1].T
-	assert y.shape[1] == n_class, "Wrong number of labels!"
-	return y
-fliter = [4, 8, 16, 32, 128]
-
+def one_hot(labels, n_class = MRS):
+    """ One-hot encoding """
+    expansion = np.eye(n_class)
+    y = expansion[:, labels-1].T
+    assert y.shape[1] == n_class, "Wrong number of labels!"
+    return y
+fliter = [4,8,16,32,128]
 # 神经网络的参数
-bat = [542, 1037, 731, 522, 428, 287, 601, 419, 845, 802, 778, 1060, 91, 433, 208]
-Learning_Rate_Base = 0.00325
+bat = [90, 172, 121, 87, 71, 47, 100, 69, 140, 133, 129, 176, 15, 72, 34]
+Learning_Rate_Base = 0.0001
 Learning_Rate_Decay = 0.99
-Regularazition_Rate = 0.00325
+Regularazition_Rate = 0.0001
 Moving_Average_Decay =0.99
-Model_Save_Path = "H:/SpaceWork/CNN-LSTM/MODELS/CNNLSTM_v10"
+EEG_length = 15000
+channel = 9
+Model_Save_Path = "H:/SpaceWork/CNN-LSTM/MODELS/CNNLSTM1min_v10"
 Model_Name = "model.ckpt"
 def evaluate(num):
     # num 表示要取那个人的数据
     # return 第num 个人数据经过测试得到数据。
     with tf.name_scope("input"):
-        input_x = tf.placeholder(tf.float32, [bat[num], 5000, 9, 1], name='EEG-input')  # 数据的输入，第一维表示一个batch中样例的个数
+        input_x = tf.placeholder(tf.float32, [bat[num], EEG_length, channel, 1], name='EEG-input')  # 数据的输入，第一维表示一个batch中样例的个数
         input_y = tf.placeholder(tf.float32, [None, 7], name='EEG-lable')  # 一个batch里的lable
     regularlizer = tf.contrib.layers.l2_regularizer(Regularazition_Rate)#本来测试的时候不用加这个
     is_training = tf.cast(False, tf.bool)
@@ -47,16 +51,16 @@ def evaluate(num):
         if ckpt and ckpt.model_checkpoint_path:
             saver.restore(sess,ckpt.model_checkpoint_path)
             global_step = ckpt.model_checkpoint_path.split('/')[-1].split('-')[-1]
-            x, y = raw_test_batch10(num)#获取第x个人的数据
-            reshape_xs = np.reshape(x,(-1,5000,9,1))
+            x, y = raw_test_batch1min(num)#获取第x个人的数据
+            reshape_xs = np.reshape(x,(-1,EEG_length,channel,1))
             ys = one_hot(y)
             conv1, pool1, conv2, pool2, conv3, pool3, conv4, pool4,lstm, acc_score =sess.run([out['conv1'], out['pool1'], out['conv2'], out['pool2'],
                                                                                          out['conv3'], out['pool3'], out['conv4'], out['pool4'],out['rnn'],
                                                                                          accuracy],feed_dict={input_x: reshape_xs, input_y: ys})
 
 
-            pool4 = np.reshape(pool4,(-1,313,9,32))
-            Lstm = np.reshape(lstm,(-1,313,1,128))
+            pool4 = np.reshape(pool4,(-1,938,9,32))
+            Lstm = np.reshape(lstm,(-1,938,1,128))
 
             print("Afer %s training step, test accuracy = %g" % (global_step,acc_score))
         else :
@@ -138,12 +142,14 @@ def sum(num):
         data1.append(channel[i])
     data1 = np.array(data1)
     data = np.reshape(data1, (-1, 9))
-    sio.savemat('D:/CNN_LSTM/newResult/beta/'+str(num)+'.mat', {'data':data})
+    sio.savemat('D:/CNN_LSTM/newResult1min/delta/'+str(num)+'.mat', {'data':data})
 
 def main(argv=None):
-    for i in range(0,15):
+    for i in range(1):
+        # conv1, pool1, conv2, pool2, conv3, pool3, conv4, pool4, lstm = evaluate(i)
         tf.reset_default_graph() # Python的控制台会保存上次运行结束的变量，需要将之前的结果清除
         sum(i)
+        # delta_data(i)
     # sum(0) # 计算第num个人的数据分析
 
 if __name__ == '__main__':

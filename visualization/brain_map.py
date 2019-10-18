@@ -6,7 +6,10 @@ from matplotlib import patches
 from matplotlib.path import Path
 from matplotlib import cm
 from scipy._lib.six import xrange
-from visualization.channelLocation import CHANNEL_9_APPROX, get_channelpos
+
+from VISUALIZATION.channelLocation import CHANNEL_9_APPROX, get_channelpos
+
+
 def ax_scalp(v, channels,ax=None, annotate=True,
              vmin=None, vmax=None, cmap=cm.coolwarm,
              scalp_line_width=1,

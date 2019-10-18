@@ -7,23 +7,28 @@ alpha_data(num)表示去第num个经过alpha滤波的数据
 return 对应mat数据集的batch
 """
 ## 本来是想将每个文件的路径放到一个txt文件中，通过列表提取每行赋的路径，但一直报错，'' 与""的问题--已解决
-with open("H:/SpaceWork/CNN-LSTM/Beta_path10") as file_object: #在这里选择什么频带数据
+with open("H:/SpaceWork/CNN-LSTM/Delta1min") as file_object: #在这里选择什么频带数据
     lines = file_object.readlines()  # 从文件中读取每一行，将获取的内容放到list里
 delta_path = []
 for line in lines:
     delta_path.append(line.strip())  # 将每行地址追加到一个数组里
 #
-
+length = 15000
+length_2 = 7500
+length_4 = 3750
+length_8 = 1875
+length_16 = 938
 ###怎么将mat数据分成单个500*9的数据矩阵，将128*9矩阵放到一个batch里##
 def delta_data(num):
     test_batch = []
     load_data0 = sio.loadmat(delta_path[num])  # 鍔犺浇mat鏂囦欢
     load_matrix = load_data0['data']  # 鎻愬彇鍑鸿鏁版嵁
     shape = load_matrix.shape[0]
-    for i in range(0, int(shape/5000)):#存储第一个人的数据，将其作为测试集
-        batch = load_matrix[i * 5000:(i + 1) * 5000]  # 取500*9的数据矩阵
+    for i in range(0, int(shape/length)):#存储第一个人的数据，将其作为测试集
+        batch = load_matrix[i * length:(i + 1) * length]  # 取500*9的数据矩阵
         test_batch.append(batch)  # 取得的矩阵追加到list里
     test_batch = np.array(test_batch)
+    print(test_batch.shape)
     return test_batch
 def build_single_delta(num,channel):
     '''
@@ -47,112 +52,114 @@ def load_delta_data_conv1(num,channel):
     delta_data = build_single_delta(num,channel)
     shape = delta_data.size
     temp = []
-    flg = int(shape / 5000)
+    flg = int(shape / length)
     for j in range(flg):
-        for i in range(0, 4998):
-            tem = (delta_data[j * 5000 +i]+delta_data[j * 5000 +i+1]+delta_data[j * 5000 +i+2])/ 3
+        for i in range(0, length-2):
+            tem = (delta_data[j * length +i]+delta_data[j * length +i+1]+delta_data[j * length +i+2])/ 3
             temp.append(tem)
-        temp.append((delta_data[j * 5000 + 4998]+delta_data[j * 5000 + 4999])/2)# 添加倒数第二个数据
-        temp.append(delta_data[j * 5000 + 4999])
+        temp.append((delta_data[j * length + length-2]+delta_data[j * length + length-1])/2)# 添加倒数第二个数据
+        temp.append(delta_data[j * length + length-1])
     data = np.array(temp)
     return data
 
 def load_delta_data_pool1(num,channel,batchsize):
 
     #num 表示第几个实验者，channel表示要处理的通道
-    # raw_data 5000 return 2500
+    # raw_data 15000 return 7500
     delta_data = load_delta_data_conv1(num, channel)
 
     temp = []
     flg = batchsize
     for j in range(0, flg):
-        for i in range(2499):
-            tem = (delta_data[j*5000+i*2]+delta_data[j*5000 +i*2+1]+delta_data[j*5000 +i*2+2])/3
+        for i in range(length_2-1):
+            tem = (delta_data[j*length+i*2]+delta_data[j*length +i*2+1]+delta_data[j*length +i*2+2])/3
             temp.append(tem)
-        temp.append((delta_data[j * 5000+4998]+delta_data[j * 5000+4999])/2)
+        temp.append((delta_data[j * length+length-2]+delta_data[j * length+length-1])/2)
     data = np.array(temp)
     return data
 def load_delta_data_conv2(num,channel,batchsize):
-    # raw_data 2500 return 2500
+    # raw_data 7500 return 7500
     temp = []
     delta_data = load_delta_data_pool1(num,channel,batchsize)
     flg = batchsize
+
     for j in range(0, flg):
-        for i in range(0, 2498):
-            tem = (delta_data[j * 2500+i] + delta_data[j * 2500  +i+ 1] + delta_data[j * 2500 +i + 2]) / 3
+        for i in range(0, length_2-2):
+            tem = (delta_data[j * length_2+i] + delta_data[j * length_2  +i+ 1] + delta_data[j * length_2 +i + 2]) / 3
             temp.append(tem)
-        temp.append((delta_data[j * 2500 + 2498] + delta_data[j * 2500 + 2499]) / 2)
-        temp.append(delta_data[2499])
+        temp.append((delta_data[j * length_2 + length_2-2] + delta_data[j * length_2 + length_2-1]) / 2)
+        temp.append(delta_data[length_2-1])
     data = np.array(temp)
     return data
 
 def load_delta_data_pool2(num,channel,batchsize):
     #path 表示第几个实验者，count表示要处理的通道
-    # raw_data 2500 return 1250
+    # raw_data 7500 return 3750
     temp = []
     delta_data = load_delta_data_conv2(num,channel,batchsize)
     flg = batchsize
+
     for j in range(0, flg):
-        for i in range(0, 1249):
-            tem = (delta_data[j * 2500 + i * 2] + delta_data[j * 2500 + i * 2 + 1] + delta_data[j * 2500 + i * 2 + 2]) / 3
+        for i in range(0, length_4-1):
+            tem = (delta_data[j * length_2 + i * 2] + delta_data[j * length_2 + i * 2 + 1] + delta_data[j * length_2 + i * 2 + 2]) / 3
             temp.append(tem)
-        temp.append((delta_data[j * 2500 + 2498] + delta_data[j * 2500 + 2499]) / 2)
+        temp.append((delta_data[j * length_2 + length_2-2] + delta_data[j * length_2 + length_2-1]) / 2)
     data = np.array(temp)
     return data
 def load_delta_data_conv3(num,channel,batchsize):
     #path 表示第几个实验者，count表示要处理的通道
-    # raw_data 1250 return 1250
+    # raw_data 3750 return 3750
     temp = []
     delta_data = load_delta_data_pool2(num,channel,batchsize)
     flg = batchsize
     for j in range(0, flg):
-        for i in range(0,1248):
-            tem = (delta_data[j * 1250 +i] + delta_data[j * 1250 + i  + 1] + delta_data[j * 1250 + i  + 2]) / 3
+        for i in range(0,length_4-2):
+            tem = (delta_data[j * length_4 +i] + delta_data[j * length_4 + i  + 1] + delta_data[j * length_4 + i  + 2]) / 3
             temp.append(tem)
-        temp.append((delta_data[j * 1250 + 1248] + delta_data[j * 1250 + 1249]) / 2)
-        temp.append(delta_data[j * 1250 + 1249])
+        temp.append((delta_data[j * length_4 + length_4-2] + delta_data[j * length_4 + length_4-1]) / 2)
+        temp.append(delta_data[j * length_4 + length_4-1])
     data = np.array(temp)
     return data
 def load_delta_data_pool3(num,channel,batchsize):
     # path 表示第几个实验者，count表示要处理的通道
-    # raw_data 1250 return 625
+    # raw_data 3750 return 1875
     temp = []
     delta_data = load_delta_data_conv3(num,channel,batchsize)
     flg = batchsize
     for j in range(0, flg):
-        for i in range(0, 624):
-            tem = (delta_data[j * 1250 + i*2] + delta_data[j * 1250+ i*2 + 1] + delta_data[j * 1250+ i*2 + 2]) / 3
+        for i in range(0, length_8-1):
+            tem = (delta_data[j * length_4 + i*2] + delta_data[j * length_4+ i*2 + 1] + delta_data[j * length_4+ i*2 + 2]) / 3
             temp.append(tem)
-        temp.append((delta_data[j * 1250 + 1248] + delta_data[j * 1250 + 1249]) / 2)
+        temp.append((delta_data[j * length_4 + length_4-2] + delta_data[j * length_4 + length_4-1]) / 2)
     data = np.array(temp)
     return data
 
 
 def load_delta_data_conv4(num,channel,batchsize):
-    # raw_data 625 return 625
+    # raw_data 1875 return 1875
     temp = []
     delta_data = load_delta_data_pool3(num,channel,batchsize)
     flg = batchsize
     for j in range(0, flg):
-        for i in range(0, 623):
-            tem = (delta_data[j * 625 + i ] + delta_data[j * 625 + i + 1] + delta_data[j * 625 + i + 2]) / 3
+        for i in range(0, length_8-2):
+            tem = (delta_data[j * length_8 + i ] + delta_data[j * length_8 + i + 1] + delta_data[j * length_8 + i + 2]) / 3
             temp.append(tem)
-        temp.append((delta_data[j * 625+623]+delta_data[j * 625+624] )/2)
-        temp.append(delta_data[j*625+624])
+        temp.append((delta_data[j * length_8 + length_8-2]+delta_data[j * length_8+length_8-1] )/2)
+        temp.append(delta_data[j*length_8+length_8-1])
     data = np.array(temp)
     return data
 
 
 def load_delta_data_pool4(num,channel,batchsize):
-    # raw_data 625 return 313
+    # raw_data 1875 return 938
     temp = []
     delta_data = load_delta_data_conv4(num,channel,batchsize)
     flg = batchsize
     for j in range(0, flg):
-        for i in range(0, 312):
-            tem = (delta_data[j * 625 + i*2] + delta_data[j * 625 + i*2 + 1] + delta_data[j * 625 + i*2 + 2]) / 3
+        for i in range(0, length_16-1):
+            tem = (delta_data[j * length_8 + i*2] + delta_data[j * length_8 + i*2 + 1] + delta_data[j * length_8 + i*2 + 2]) / 3
             temp.append(tem)
-        temp.append(delta_data[j * 625 + 624])
+        temp.append((delta_data[j * 750 + length_8] + delta_data[j * 750 + length_8]) / 2 )
     data = np.array(temp)
     return data
 

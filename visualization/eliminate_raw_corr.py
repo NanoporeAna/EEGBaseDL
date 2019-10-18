@@ -5,8 +5,8 @@ import numpy as np
 '''
 
 CNN =['conv1', 'pool1', 'conv2', 'pool2', 'conv3', 'pool3', 'conv4', 'pool4']
-path = 'D:/EEG_WorkSpace/person/NIHSS/data_corr/delta/'
-path1 = 'D:/EEG_WorkSpace/person/raw_corr_NIHSS/'
+path = 'D:/CNN_LSTM/alpha/'
+path1 = 'D:/CNN_LSTM/raw/'
 def eliminate_corr():
 	for i in range(0,15):
 
@@ -95,7 +95,7 @@ def eliminate_corr():
 		raw_array7 = np.reshape(raw_array7, (-1, 9))
 		array7 = array7 - raw_array7
 
-		sio.savemat('D:/EEG_WorkSpace/person/eliminate_corr_NIHSS/eliminate_delta/'+str(i)+'.mat', {CNN[0]:array0, CNN[1]:array1, CNN[2]:array2, CNN[3]:array3, CNN[4]:array4, CNN[5]:array5, CNN[6]:array6, CNN[7]:array7 })
+		sio.savemat('D:/CNN_LSTM/alpha/eliminate/'+str(i)+'.mat', {CNN[0]:array0, CNN[1]:array1, CNN[2]:array2, CNN[3]:array3, CNN[4]:array4, CNN[5]:array5, CNN[6]:array6, CNN[7]:array7 })
 
 
 eliminate_corr()

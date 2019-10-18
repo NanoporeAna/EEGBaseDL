@@ -3,40 +3,40 @@ import numpy as np
 import pandas as pd
 import scipy.io as sio
 
-from DATA.load_delta_data10 import load_delta_data_conv1, load_delta_data_pool1, load_delta_data_pool2, \
-    load_delta_data_pool3,load_delta_data_pool4, load_delta_data_conv2, load_delta_data_conv4, load_delta_data_conv3
-from DATA.load_single_data10 import raw_test_batch10
+from DATA.load_data1min import raw_test_batch1min
+from DATA.load_label import label_conv1, label_pool1, label_pool2, label_pool3, label_pool4
 from MODELS.CNNLSTM import CNN_LSTM
 
 
 def one_hot(labels, n_class = 7):
-	""" One-hot encoding """
-	expansion = np.eye(n_class)
-	y = expansion[:, labels-1].T
-	assert y.shape[1] == n_class, "Wrong number of labels!"
-	return y
+    """ One-hot encoding """
+    expansion = np.eye(n_class)
+    y = expansion[:, labels-1].T
+    assert y.shape[1] == n_class, "Wrong number of labels!"
+    return y
 fliter = [4, 8, 16, 32, 128]
 
 # 神经网络的参数
-bat = [542, 1037, 731, 522, 428, 287, 601, 419, 845, 802, 778, 1060, 91, 433, 208]
-Learning_Rate_Base = 0.00325
+bat = [90,172,121,87,71,47,100,69,140,133,129,176,15,72,34]
+Learning_Rate_Base = 0.0005
 Learning_Rate_Decay = 0.99
-Regularazition_Rate = 0.00325
+Regularazition_Rate = 0.0005
 Moving_Average_Decay =0.99
-Model_Save_Path = "H:/SpaceWork/CNN-LSTM/MODELS/CNNLSTM_v10"
+Model_Save_Path = "H:/SpaceWork/CNN-LSTM/MODELS/CNNLSTM1min_v10"
 Model_Name = "model.ckpt"
 def evaluate(num):
     # num 表示要取那个人的数据
     # return 第num 个人数据经过测试得到数据。
     with tf.name_scope("input"):
-        input_x = tf.placeholder(tf.float32, [bat[num], 5000, 9, 1], name='EEG-input')  # 数据的输入，第一维表示一个batch中样例的个数
+        input_x = tf.placeholder(tf.float32, [bat[num], 15000, 9, 1], name='EEG-input')  # 数据的输入，第一维表示一个batch中样例的个数
         input_y = tf.placeholder(tf.float32, [None, 7], name='EEG-lable')  # 一个batch里的lable
     regularlizer = tf.contrib.layers.l2_regularizer(Regularazition_Rate)#本来测试的时候不用加这个
     is_training = tf.cast(False, tf.bool)
     out = CNN_LSTM(input_x, is_training, None)
     y = out['logist']
+    predection = tf.argmax(y, 1)
     with tf.name_scope("test_acc"):
-        correct_predection = tf.equal(tf.argmax(y,1),tf.argmax(input_y,1))
+        correct_predection = tf.equal(predection,tf.argmax(input_y,1))
         accuracy = tf.reduce_mean(tf.cast(correct_predection,tf.float32))
         tf.summary.scalar('test_acc', accuracy)
     variable_averages = tf.train.ExponentialMovingAverage(Moving_Average_Decay)
@@ -47,22 +47,22 @@ def evaluate(num):
         if ckpt and ckpt.model_checkpoint_path:
             saver.restore(sess,ckpt.model_checkpoint_path)
             global_step = ckpt.model_checkpoint_path.split('/')[-1].split('-')[-1]
-            x, y = raw_test_batch10(num)#获取第x个人的数据
-            reshape_xs = np.reshape(x,(-1,5000,9,1))
+            x, y = raw_test_batch1min(num)#获取第x个人的数据
+            reshape_xs = np.reshape(x,(-1,15000,9,1))
             ys = one_hot(y)
-            conv1, pool1, conv2, pool2, conv3, pool3, conv4, pool4,lstm, acc_score =sess.run([out['conv1'], out['pool1'], out['conv2'], out['pool2'],
+            conv1, pool1, conv2, pool2, conv3, pool3, conv4, pool4,lstm, acc_score, pre =sess.run([out['conv1'], out['pool1'], out['conv2'], out['pool2'],
                                                                                          out['conv3'], out['pool3'], out['conv4'], out['pool4'],out['rnn'],
-                                                                                         accuracy],feed_dict={input_x: reshape_xs, input_y: ys})
+                                                                                         accuracy, predection],feed_dict={input_x: reshape_xs, input_y: ys})
 
 
-            pool4 = np.reshape(pool4,(-1,313,9,32))
-            Lstm = np.reshape(lstm,(-1,313,1,128))
+            pool4 = np.reshape(pool4,(-1,938,9,32))
+            Lstm = np.reshape(lstm,(-1,938,1,128))
 
             print("Afer %s training step, test accuracy = %g" % (global_step,acc_score))
         else :
             print("No checkpoint file found")
-    return  conv1, pool1, conv2, pool2, conv3, pool3, conv4, pool4, Lstm
-def get_corr_fliter(num,data,channle,fliter,pool):
+    return  conv1, pool1, conv2, pool2, conv3, pool3, conv4, pool4, Lstm, pre
+def get_corr_fliter(pre,num,data,channle,fliter,pool):
     """
 
     :param num: 要处理的第几个人的数据
@@ -79,27 +79,24 @@ def get_corr_fliter(num,data,channle,fliter,pool):
     for i in range(channle):
         temp = data[i]#得到第i通道下各滤波器数据
         oneObject = []
-
         if pool == 0:
-            ga = load_delta_data_conv1(num,i)#获取要进行相关性分析的对象数据
+            ga = label_conv1(pre, i, bat[num])  # 获取要进行相关性分析的对象数据
         if pool == 1:
-            ga = load_delta_data_pool1(num,i,bat[num])
-            # ga = load_delta_data_pool1(ga, bat[num])
+            ga = label_pool1(pre, i, bat[num])
         if pool == 2:
-            ga = load_delta_data_conv2(num,i,bat[num])#获取要进行相关性分析的对象数据
-            # ga = load_delta_data_conv2(ga, bat[num]) # 得将得到的数据固定化存储，然后提取出来
+            ga = label_pool1(pre, i, bat[num])  # 获取要进行相关性分析的对象数据
         if pool == 3:
-            ga = load_delta_data_pool2(num,i,bat[num])
+            ga = label_pool2(pre, i, bat[num])
         if pool == 4:
-            ga = load_delta_data_conv3(num,i,bat[num])#获取要进行相关性分析的对象数据
+            ga = label_pool2(pre, i, bat[num])
         if pool == 5:
-            ga = load_delta_data_pool3(num,i,bat[num])
+            ga = label_pool3(pre, i, bat[num])
         if pool == 6:
-            ga = load_delta_data_conv4(num,i,bat[num])#获取要进行相关性分析的对象数据
+            ga = label_pool3(pre, i, bat[num])
         if pool == 7:
-            ga = load_delta_data_pool4(num,i,bat[num])
+            ga = label_pool4(pre, i, bat[num])
         if pool == 8:
-            ga = load_delta_data_pool4(num,i,bat[num])
+            ga = label_pool4(pre, i, bat[num])
 
         cost = []
         for k in range(fliter):
@@ -109,41 +106,46 @@ def get_corr_fliter(num,data,channle,fliter,pool):
         # x = max(cost,key=abs)
         print("神经网络第 %g通道后的数据与原通道 %g的相关性为：%g " % (i, i, x))
         list.append(x)  # 二维矩阵
-    return list
-
+    return np.mean(list)
+chan = [9,9,9,9,9,9,9,9,1]
 def sum(num):
-    conv1, pool1, conv2, pool2, conv3, pool3, conv4, pool4, lstm = evaluate(num)
+    ans = []
+    conv1, pool1, conv2, pool2, conv3, pool3, conv4, pool4, lstm, pre = evaluate(num)
     name = [conv1, pool1, conv2, pool2, conv3, pool3, conv4, pool4, lstm]
     name1 = ['conv1', 'pool1', 'conv2', 'pool2', 'conv3', 'pool3', 'conv4', 'pool4', 'lstm']
-    X_corr = []
-    # channel_name = ['Lflv', 'Rflv', 'BP', '1', '2', '3', '4', '5', '6']
     channel = ['x1', 'x2', 'x3', 'x4', 'x5', 'x6', 'x7','x8', 'x9']
-    data1 = []
-    for i in range(8):#i表示处理后第几层数据
+    print(pre)
+    for i in range(9):
         #     print(fliter[int(i/2)])`
         data = name[i]
         list = []
         size = data.shape[0] * data.shape[1]  # 对应滤波alpha or gamma or ... 原始数据通道铺平的长度
         print('size = %g'% (size))
-        for j in range(9):  # 隐藏层各通道
+        if i!=8:
+            for j in range(9):  # 隐藏层各通道
+                flag = []
+                for k in range(fliter[int(i / 2)]):  # 神经网络fliter器数量
+                    temp = data[:, :, j, k]  #
+                    temp = np.reshape(temp, [size])
+                    flag.append(temp)  # 第j个通道下各滤波器下的值
+                list.append(flag)  # 所有通道
+        if i ==8:
             flag = []
             for k in range(fliter[int(i / 2)]):  # 神经网络fliter器数量
-                temp = data[:, :, j, k]  #
+                temp = data[:, :, 0, k]  #
                 temp = np.reshape(temp, [size])
                 flag.append(temp)  # 第j个通道下各滤波器下的值
-            list.append(flag)  # 第i层神经网所有通道
+            list.append(flag)  # 所有通道
         print("第%g神经层数据相关性处理开始：" % (i))
-        channel[i] = get_corr_fliter(num, list, 9, fliter[int(i / 2)], i)
-        # channel[i] = np.array(channel[i])
-        data1.append(channel[i])
-    data1 = np.array(data1)
-    data = np.reshape(data1, (-1, 9))
-    sio.savemat('D:/CNN_LSTM/newResult/beta/'+str(num)+'.mat', {'data':data})
+        temp = get_corr_fliter(pre,num, list, chan[i], fliter[int(i / 2)], i)
+        ans.append(temp)
+    sio.savemat('D:/CNN_LSTM/newlabel/'+str(num)+'.mat', {'data':ans})
 
 def main(argv=None):
-    for i in range(0,15):
+    for i in range(15):
         tf.reset_default_graph() # Python的控制台会保存上次运行结束的变量，需要将之前的结果清除
         sum(i)
+        # evaluate(i)
     # sum(0) # 计算第num个人的数据分析
 
 if __name__ == '__main__':

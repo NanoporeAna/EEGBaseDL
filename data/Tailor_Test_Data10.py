@@ -1,14 +1,12 @@
 import scipy.io as sio
 import numpy as np
-import tensorflow as tf
-from datasets.DataSet import DataSet
 
 """
 这个脚本是用来获取整个数据集的产生的500*9 矩阵大小的 batch
 test_batch()
 return (18540,500,9)的样本集和（18540）便签集
 """
-with open("H:/SpaceWork/EEG_Work/path.txt") as file_object:
+with open("H:/SpaceWork/EEG_Work/raw_path10.txt") as file_object:
     lines = file_object.readlines()  # 浠庢枃浠朵腑璇诲彇姣忎竴琛岋紝灏嗚幏鍙栫殑鍐呭鏀惧埌list閲?
 mat_path = []
 for line in lines:
@@ -83,10 +81,10 @@ def tailor_test_batch():
 
     #对10号样本进行裁剪增加1倍数据集，平衡数据
     for j in range(int(shape[9]/10000)-1):
-        batchx =load_matrix9[j * 5000+1370:(j + 1) * 5000+1370]
+        batchx =load_matrix9[j * 5000+1111:(j + 1) * 5000+1111]
         batch = np.reshape(batchx, (5000, 9))
         label =get_lable(mat_path[9])
-        batch1 =load_matrix9[j * 5000+2490:(j + 1) * 5000+2490]
+        batch1 =load_matrix9[j * 5000+2102:(j + 1) * 5000+2102]
         test_batch.append(batch)
         test_label.append(label)
         test_batch.append(batch1)

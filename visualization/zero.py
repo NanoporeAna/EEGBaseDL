@@ -1,10 +1,12 @@
 import scipy.io as sio
 import numpy as np
 '''
-无关的数据相关度那一个值填充为0'''
+无关的数据相关度那一个值填充为0
+按照感受野对应相关值
+'''
 
 CNN =['conv1', 'pool1', 'conv2', 'pool2', 'conv3', 'pool3', 'conv4', 'pool4']
-path = 'D:/EEG_WorkSpace10/MRS/data_corr/delta/'
+path = 'D:/EEG_WorkSpace5min/CNNLSTM/delta/'
 def delt():
 	for i in range(0,15):
 
@@ -14,20 +16,23 @@ def delt():
 		channel0 =load_matrix[0:9]
 		array0 = np.array(channel0)
 		array0 = np.reshape(array0, (-1,9))
-		array0[0,3:9] = 0
+		array0[0,1:9] = 0
 		array0[1, 0] = 0
-		array0[1,4:9] = 0
+		array0[1,2:9] = 0
 		array0[2, 0:2] = 0
-		array0[2, 5:9] = 0
+		array0[2, 3:9] = 0
 		array0[3, 0:3] = 0
-		array0[3, 6:9] = 0
+		array0[3, 4:9] = 0
 		array0[4, 0:4] = 0
-		array0[4, 7:9] = 0
+		array0[4, 5:9] = 0
 		array0[5, 0:5] = 0
-		array0[5, 8] = 0
+		array0[5, 6:9] = 0
 		array0[6, 0:6] = 0
+		array0[6, 7:9] = 0
 		array0[7, 0:7] = 0
+		array0[7, 8:9] = 0
 		array0[8, 0:8] = 0
+
 
 		load_matrix1 = load_data[CNN[1]]
 		channel1 = load_matrix1[0:9]
@@ -78,7 +83,7 @@ def delt():
 		channel7 = load_matrix7[0:9]
 		array7 = np.array(channel7)
 		array7 = np.reshape(array7, (-1, 9))
-		sio.savemat('D:/EEG_WorkSpace10/MRS/data_corr/delta_zero/'+str(i)+'.mat', {CNN[0]:array0, CNN[1]:array1, CNN[2]:array2, CNN[3]:array3, CNN[4]:array4, CNN[5]:array5, CNN[6]:array6, CNN[7]:array7 })
+		sio.savemat('D:/EEG_WorkSpace5min/CNNLSTM/delta/max/'+str(i)+'.mat', {CNN[0]:array0, CNN[1]:array1, CNN[2]:array2, CNN[3]:array3, CNN[4]:array4, CNN[5]:array5, CNN[6]:array6, CNN[7]:array7 })
 
 
 delt()

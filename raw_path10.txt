@@ -1,0 +1,15 @@
+D://EEG_Data10/raw/raw_data_1.mat
+D://EEG_Data10/raw/raw_data_2.mat
+D://EEG_Data10/raw/raw_data_3.mat
+D://EEG_Data10/raw/raw_data_4.mat
+D://EEG_Data10/raw/raw_data_5.mat
+D://EEG_Data10/raw/raw_data_6.mat
+D://EEG_Data10/raw/raw_data_7.mat
+D://EEG_Data10/raw/raw_data_8.mat
+D://EEG_Data10/raw/raw_data_9.mat
+D://EEG_Data10/raw/raw_data_10.mat
+D://EEG_Data10/raw/raw_data_11.mat
+D://EEG_Data10/raw/raw_data_12.mat
+D://EEG_Data10/raw/raw_data_13.mat
+D://EEG_Data10/raw/raw_data_14.mat
+D://EEG_Data10/raw/raw_data_15.mat

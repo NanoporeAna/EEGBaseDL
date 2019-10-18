@@ -2,12 +2,14 @@ import tensorflow as tf
 import numpy as np
 import pandas as pd
 import scipy.io as sio
-
-from DATA.load_delta_data10 import load_delta_data_conv1, load_delta_data_pool1, load_delta_data_pool2, \
-    load_delta_data_pool3,load_delta_data_pool4, load_delta_data_conv2, load_delta_data_conv4, load_delta_data_conv3
+from DATA.load_PSD_data10 import load_psd_data_pool1, load_psd_data_pool4, load_psd_data_pool3, load_psd_data_pool2
 from DATA.load_single_data10 import raw_test_batch10
 from MODELS.CNNLSTM import CNN_LSTM
-
+"""
+这里我们想做的是将每个人波段的光谱密度均值作为特征值即（10s 10个数据值作为一个变量）与神经网络处理后感受野对应下的结果值做相关
+但这里两个样本容量不一致，没法做person相关，要不就是将神经网络处理后的数据变为10，或者将特征值放宽
+2019年10月13日15:46:39 这里在matlab就按照神经网size变换的size得到的功谱率均值来做相关性
+"""
 
 def one_hot(labels, n_class = 7):
 	""" One-hot encoding """
@@ -16,7 +18,7 @@ def one_hot(labels, n_class = 7):
 	assert y.shape[1] == n_class, "Wrong number of labels!"
 	return y
 fliter = [4, 8, 16, 32, 128]
-
+band = 'delta'
 # 神经网络的参数
 bat = [542, 1037, 731, 522, 428, 287, 601, 419, 845, 802, 778, 1060, 91, 433, 208]
 Learning_Rate_Base = 0.00325
@@ -52,9 +54,7 @@ def evaluate(num):
             ys = one_hot(y)
             conv1, pool1, conv2, pool2, conv3, pool3, conv4, pool4,lstm, acc_score =sess.run([out['conv1'], out['pool1'], out['conv2'], out['pool2'],
                                                                                          out['conv3'], out['pool3'], out['conv4'], out['pool4'],out['rnn'],
-                                                                                         accuracy],feed_dict={input_x: reshape_xs, input_y: ys})
-
-
+                                                                                        accuracy],feed_dict={input_x: reshape_xs, input_y: ys})
             pool4 = np.reshape(pool4,(-1,313,9,32))
             Lstm = np.reshape(lstm,(-1,313,1,128))
 
@@ -64,43 +64,27 @@ def evaluate(num):
     return  conv1, pool1, conv2, pool2, conv3, pool3, conv4, pool4, Lstm
 def get_corr_fliter(num,data,channle,fliter,pool):
     """
-
     :param num: 要处理的第几个人的数据
     :param data: 神经网络处理得到的数据
     :param channle: 神经网络下的通道数
     :param fliter: 该data下的滤波器数
+    :param pool: 表示神经网络哪一层
     :return:
     """
     list = []
-
     # con = evaluate(num,9,'conv1',16,2712000)#返回各通道滤波器下的list evaluate(num,channel,name,fliter,size):
     # num 表示要取那个人的数据，channel 表示对那个隐藏层通道数据感兴趣，name表示是哪一层，fliter 表示神经网络中间层滤波器的数量 size隐藏层处理数据长度
     # return 第num 个人数据经过测试得到的在name层处理后的输出数据对应channel的值。
-    for i in range(channle):
-        temp = data[i]#得到第i通道下各滤波器数据
-        oneObject = []
-
-        if pool == 0:
-            ga = load_delta_data_conv1(num,i)#获取要进行相关性分析的对象数据
-        if pool == 1:
-            ga = load_delta_data_pool1(num,i,bat[num])
-            # ga = load_delta_data_pool1(ga, bat[num])
-        if pool == 2:
-            ga = load_delta_data_conv2(num,i,bat[num])#获取要进行相关性分析的对象数据
-            # ga = load_delta_data_conv2(ga, bat[num]) # 得将得到的数据固定化存储，然后提取出来
-        if pool == 3:
-            ga = load_delta_data_pool2(num,i,bat[num])
-        if pool == 4:
-            ga = load_delta_data_conv3(num,i,bat[num])#获取要进行相关性分析的对象数据
-        if pool == 5:
-            ga = load_delta_data_pool3(num,i,bat[num])
-        if pool == 6:
-            ga = load_delta_data_conv4(num,i,bat[num])#获取要进行相关性分析的对象数据
-        if pool == 7:
-            ga = load_delta_data_pool4(num,i,bat[num])
-        if pool == 8:
-            ga = load_delta_data_pool4(num,i,bat[num])
-
+    for i in range(3,channle):
+        temp = data[i] #得到第i通道下各滤波器数据
+        if pool ==1:
+            ga = load_psd_data_pool1(num,i,band) # 这里得到的是我们已经求得的对应频段下PSD 功谱率均值
+        if pool ==3:
+            ga = load_psd_data_pool2(num,i,band) # 这里得到的是我们已经求得的对应频段下PSD 功谱率均值
+        if pool ==5:
+            ga = load_psd_data_pool3(num,i,band) # 这里得到的是我们已经求得的对应频段下PSD 功谱率均值
+        if pool ==7:
+            ga = load_psd_data_pool4(num,i,band,bat[num]) # 这里得到的是我们已经求得的对应频段下PSD 功谱率均值
         cost = []
         for k in range(fliter):
             cor = pd.DataFrame({'raw': temp[k], 'gamma': ga})  # 构建相关性的数据型
@@ -114,9 +98,6 @@ def get_corr_fliter(num,data,channle,fliter,pool):
 def sum(num):
     conv1, pool1, conv2, pool2, conv3, pool3, conv4, pool4, lstm = evaluate(num)
     name = [conv1, pool1, conv2, pool2, conv3, pool3, conv4, pool4, lstm]
-    name1 = ['conv1', 'pool1', 'conv2', 'pool2', 'conv3', 'pool3', 'conv4', 'pool4', 'lstm']
-    X_corr = []
-    # channel_name = ['Lflv', 'Rflv', 'BP', '1', '2', '3', '4', '5', '6']
     channel = ['x1', 'x2', 'x3', 'x4', 'x5', 'x6', 'x7','x8', 'x9']
     data1 = []
     for i in range(8):#i表示处理后第几层数据
@@ -124,7 +105,7 @@ def sum(num):
         data = name[i]
         list = []
         size = data.shape[0] * data.shape[1]  # 对应滤波alpha or gamma or ... 原始数据通道铺平的长度
-        print('size = %g'% (size))
+        # print('size = %g'% (size))
         for j in range(9):  # 隐藏层各通道
             flag = []
             for k in range(fliter[int(i / 2)]):  # 神经网络fliter器数量
@@ -132,16 +113,17 @@ def sum(num):
                 temp = np.reshape(temp, [size])
                 flag.append(temp)  # 第j个通道下各滤波器下的值
             list.append(flag)  # 第i层神经网所有通道
-        print("第%g神经层数据相关性处理开始：" % (i))
-        channel[i] = get_corr_fliter(num, list, 9, fliter[int(i / 2)], i)
-        # channel[i] = np.array(channel[i])
-        data1.append(channel[i])
+        if i %2 == 1:
+            print("第%g神经层数据相关性处理开始：" % (i))
+            channel[i] = get_corr_fliter(num, list, 9, fliter[int(i / 2)], i)
+            # channel[i] = np.array(channel[i])
+            data1.append(channel[i])
     data1 = np.array(data1)
-    data = np.reshape(data1, (-1, 9))
-    sio.savemat('D:/CNN_LSTM/newResult/beta/'+str(num)+'.mat', {'data':data})
+    data = np.reshape(data1, (-1, 6))#得到6个EEG通道的相关性值
+    sio.savemat('D:/CNN_LSTM/newResult10sPSD/'+band+'/'+str(num)+'.mat', {'data':data})
 
 def main(argv=None):
-    for i in range(0,15):
+    for i in range(15):
         tf.reset_default_graph() # Python的控制台会保存上次运行结束的变量，需要将之前的结果清除
         sum(i)
     # sum(0) # 计算第num个人的数据分析

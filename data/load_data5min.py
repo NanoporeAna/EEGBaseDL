@@ -4,18 +4,18 @@ import numpy as np
 ## 本来是想将每个文件的路径放到一个txt文件中，通过列表提取每行赋的路径，但一直报错，'' 与""的问题--已解决
 from scipy import fftpack
 
-with open("H:/SpaceWork/CNN-LSTM/DATA1min") as file_object:
+with open("H:/SpaceWork/CNN-LSTM/DATA5min") as file_object:
     lines = file_object.readlines()  # 从文件中读取每一行，将获取的内容放到list里
 mat_path = []
 for line in lines:
     mat_path.append(line.strip())  # 将每行地址追加到一个数组里
 # print("ok")
-with open("H:/SpaceWork/CNN-LSTM/DATA1min") as file_object:
+with open("H:/SpaceWork/CNN-LSTM/DATA5min") as file_object:
     line_alpha = file_object.readlines()  # 从文件中读取每一行，将获取的内容放到list里
 raw_path=[]
 for alpha in line_alpha:
     raw_path.append(alpha.strip())
-with open("H:/SpaceWork/EEG_Work/lable.txt") as file_object:
+with open("H:/SpaceWork/CNN-LSTM/lable.txt") as file_object:
     lines_lable = file_object.readlines()  # 从文件中读取每一行，将获取的内容放到list里
 lable_value = []
 for line in lines_lable:
@@ -29,15 +29,15 @@ def get_lable(load_path):  # 根据路径得到标签
     return mat_dictionary[load_path]
 
 ###怎么将mat数据分成单个500*9的数据矩阵，将128*9矩阵放到一个batch里##
-def raw_test_batch10(num):
+def raw_test_batch5min(num):
     #取num位实验者数据
     test_batch = []
     test_label = []
     load_data0 = sio.loadmat(mat_path[num])  # 鍔犺浇mat鏂囦欢
     load_matrix = load_data0['data2']  # 鎻愬彇鍑鸿鏁版嵁
     shape = load_matrix.shape[0]
-    for i in range(0, int(shape/15000)):#存储第一个人的数据，将其作为测试集
-        batch = load_matrix[i * 15000:(i + 1) * 15000]  # 取500*9的数据矩阵
+    for i in range(0, int(shape/6000)):#存储第一个人的数据，将其作为测试集
+        batch = load_matrix[i * 6000:(i + 1) * 6000]  # 取500*9的数据矩阵
         label = get_lable(mat_path[num])
         test_batch.append(batch)  # 取得的矩阵追加到list里
         test_label.append(label)
@@ -315,6 +315,4 @@ def load_raw_data_pool4(path,count):
                      raw_data[j * 5000 + 4998] + raw_data[j * 5000 + 4999]) / 8)
     data = np.array(temp)
     return data
-for i in range(15):
-    data,_ = raw_test_batch10(1)
-    print(data.shape)
+

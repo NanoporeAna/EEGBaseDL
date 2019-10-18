@@ -3,26 +3,26 @@ import numpy as np
 
 
 CNN =['conv1', 'pool1', 'conv2', 'pool2', 'conv3', 'pool3', 'conv4','pool4']
-path = 'D://max_delta/delta/'
+path = 'D:/eliminateBP/MRS/delta_max/eliminateBP'
 num4 = [0,5,6,7,8]
 num5 = [1,2,3,4,11,13]
 num1 = [9,12]
 num6 = [10]
 num0 = [14]
 def delt():
-	batch = []
-	path1 = path + str(num0[0]) + '.mat'
+
+	path1 = path + str(num4[0] + 1) + '.mat'
 	load_matrix1 = sio.loadmat(path1)
 	load_matrix1 = load_matrix1['data']
 	batch = load_matrix1
-	for i in range(1,1):
-		path1 = path + str(num0[i]) + '.mat'
+	for i in range(1,5):
+		path1 = path + str(num4[i]+1) + '.mat'
 		load_matrix1 = sio.loadmat(path1)
 		load_matrix1 = load_matrix1['data']
 		batch += load_matrix1
 	batch = np.array(batch)
-	batch = batch / 1
-	sio.savemat('D://max_delta/class_mean/class0.mat', {'data': batch})
+	batch = batch / 5
+	sio.savemat('D:/eliminateBP/MRS/deltaClassMean/class4.mat', {'data': batch})
 
 
 
